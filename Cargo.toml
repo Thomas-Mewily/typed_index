@@ -1,0 +1,17 @@
+[package]
+name = "index_to"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+authors = ["Mewily <thomas.mewily@gmail.com>"]
+repository = "https://github.com/Thomas-Mewily/index_to"
+keywords = ["container", "typed", "index"]
+categories = ["rust-patterns", "data-structures"]
+description = "A strongly typed Index for vector, slice, and str type"
+
+[dependencies]
+serde = { version = "1.0.215", features = ["derive"], optional = true }
+
+[features]
+serde = ["dep:serde"]
