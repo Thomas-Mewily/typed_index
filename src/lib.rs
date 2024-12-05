@@ -3,7 +3,7 @@
 //! Provides optional support for [Serde](https://docs.rs/serde/latest/serde/) (serialization / deserialization) when the "serde" feature is enabled.
 //!
 //! ```rust
-//! use index_to::*;
+//! use typed_index::*;
 //! use std::ops::Index;
 //! 
 //! struct IntAndBool
@@ -72,7 +72,7 @@ pub(crate) use serde_support::*;
 /// A strongly typed index for vector, slice, and str type.
 /// 
 /// ```rust
-/// use index_to::*;
+/// use typed_index::*;
 /// use std::ops::Index;
 /// 
 /// struct IntAndBool

@@ -3,7 +3,7 @@ Define `IndexTo<Data, Owner, Idx=usize>`, a strongly typed index for vector, sli
 Provides optional support for [Serde](https://docs.rs/serde/latest/serde/) (serialization / deserialization) when the "serde" feature is enabled.
 
 ```rust
-use index_to::*;
+use typed_index::*;
 use std::ops::Index;
 
 struct IntAndBool
