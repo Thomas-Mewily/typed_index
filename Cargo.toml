@@ -12,7 +12,7 @@ description = "A strongly typed Index for vector, slice, and str type"
 
 
 [dependencies]
-serde = { version = "1.0.215", features = ["derive"], optional = true }
+serde = { version = "1.0.3", features = ["derive"], optional = true }
 
 [features]
 serde = ["dep:serde"]
