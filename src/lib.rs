@@ -1,7 +1,9 @@
 //! A strongly typed index for vector, slice, and str type : `IndexTo<Data, Idx=usize>`
 //! 
+//! Also define a `10usize.get(&myVec)` and `IndexLike.getMut(Inside)` to access value from an index using the [IndexLike] trait.
+//! 
 //! Provides optional support for [Serde](https://docs.rs/serde/latest/serde/) (serialization / deserialization) when the "serde" feature is enabled.
-//!
+//! 
 //! ```rust
 //! use typed_index::*;
 //! use std::ops::Index;
@@ -11,7 +13,7 @@
 //!     integers : Vec<i32>,
 //!     booleans : Vec<bool>,
 //! }
-//!         
+//! 
 //! type IntegerIdx = IndexTo<i32>;
 //! type BooleanIdx = IndexTo<bool>;
 //! 
@@ -46,6 +48,10 @@
 //! assert_eq!(int_and_bool[int_idx_2 ], 20);
 //! assert_eq!(int_and_bool[bool_idx_2], true);
 //! 
+//! // Also defined the `.get()` and `.get_mut()` method on index
+//! assert_eq!(int_idx_2.get(&int_and_bool), &20);
+//! assert_eq!(bool_idx_2.get(&int_and_bool), &true);
+//! 
 //! // Also define the `typed_index()` method similar to `index()`
 //! assert_eq!(int_and_bool.integers.typed_index(IntegerIdx::from_index(1)), &20);
 //! assert_eq!(int_and_bool.booleans.typed_index(BooleanIdx::from_index(0)), &true);
@@ -53,6 +59,17 @@
 //! // Also define the `typed_index_mut()` method similar to `index_mut()`
 //! assert_eq!(int_and_bool.integers.typed_index_mut(IntegerIdx::from_index(1)), &mut 20);
 //! assert_eq!(int_and_bool.booleans.typed_index_mut(BooleanIdx::from_index(0)), &mut true);
+//! 
+//! 
+//! // `index.get_mut(&mut collection)` example
+//! impl IndexMut<IntegerIdx> for IntAndBool
+//! {
+//!     fn index_mut(&mut self, index: IntegerIdx) -> &mut Self::Output { &mut self.integers[index.index()] }
+//! }
+//! 
+//! assert_eq!(int_idx_2.get(&int_and_bool), &20);
+//! *int_idx_2.get_mut(&mut int_and_bool) = 50;
+//! assert_eq!(int_idx_2.get(&int_and_bool), &50);
 //! ```
 
 use std::fmt::{Debug, Formatter, Result as DResult};
@@ -67,60 +84,10 @@ pub(crate) use serde_support::*;
 
 mod std_impl;
 
-/// A strongly typed index for vector, slice, and str type.
-/// 
-/// ```rust
-/// use typed_index::*;
-/// use std::ops::Index;
-/// 
-/// struct IntAndBool
-/// {
-///     integers : Vec<i32>,
-///     booleans : Vec<bool>,
-/// }
-///         
-/// type IntegerIdx = IndexTo<i32>;
-/// type BooleanIdx = IndexTo<bool>;
-/// 
-/// impl Index<IntegerIdx> for IntAndBool
-/// {
-///     type Output=i32;
-///     fn index(&self, index: IntegerIdx) -> &Self::Output { &self.integers[index.index()] }
-/// }
-/// 
-/// impl Index<BooleanIdx> for IntAndBool
-/// {
-///     type Output=bool;
-///     fn index(&self, index: BooleanIdx) -> &Self::Output { &self.booleans[index.index()] }
-/// }
-/// 
-/// let mut int_and_bool = IntAndBool { integers : vec![10, 20, 30], booleans : vec![true, false] };
-/// 
-/// let int_idx  = int_and_bool.integers.index_to(1); // 20
-/// let bool_idx = int_and_bool.booleans.index_to(0); // true
-/// 
-/// // the magic in strongly typed index is here :
-/// assert_eq!(int_and_bool[int_idx ], 20);
-/// assert_eq!(int_and_bool[bool_idx], true);
-/// 
-/// // compile time error :
-/// // let b = int_and_bool.booleans[int_idx ];
-/// // let i = int_and_bool.integers[bool_idx];
-/// 
-/// let int_idx_2  = IntegerIdx::from_index(1); // 20
-/// let bool_idx_2 = BooleanIdx::from_index(0); // true
-/// 
-/// assert_eq!(int_and_bool[int_idx_2 ], 20);
-/// assert_eq!(int_and_bool[bool_idx_2], true);
-/// 
-/// // Also define the `typed_index()` method similar to `index()`
-/// assert_eq!(int_and_bool.integers.typed_index(IntegerIdx::from_index(1)), &20);
-/// assert_eq!(int_and_bool.booleans.typed_index(BooleanIdx::from_index(0)), &true);
-/// 
-/// // Also define the `typed_index_mut()` method similar to `index_mut()`
-/// assert_eq!(int_and_bool.integers.typed_index_mut(IntegerIdx::from_index(1)), &mut 20);
-/// assert_eq!(int_and_bool.booleans.typed_index_mut(BooleanIdx::from_index(0)), &mut true);
-/// ```
+mod index_extension;
+pub use index_extension::*;
+
+/// A strongly typed index that know what it is indexing 
 pub struct IndexTo<Data, Idx=usize> 
     where
     Data : ?Sized, 
@@ -246,6 +213,10 @@ mod tests {
         
         assert_eq!(int_and_bool[int_idx_2 ], 20);
         assert_eq!(int_and_bool[bool_idx_2], true);
+
+        // Also defined the `.get()` and `.get_mut()` method on index
+        assert_eq!(int_idx_2.get(&int_and_bool), &20);
+        assert_eq!(bool_idx_2.get(&int_and_bool), &true);
         
         // Also define the `typed_index()` method similar to `index()`
         assert_eq!(int_and_bool.integers.typed_index(IntegerIdx::from_index(1)), &20);
@@ -254,5 +225,16 @@ mod tests {
         // Also define the `typed_index_mut()` method similar to `index_mut()`
         assert_eq!(int_and_bool.integers.typed_index_mut(IntegerIdx::from_index(1)), &mut 20);
         assert_eq!(int_and_bool.booleans.typed_index_mut(BooleanIdx::from_index(0)), &mut true);
+
+
+        // `index.get_mut(&mut collection)` example
+        impl IndexMut<IntegerIdx> for IntAndBool
+        {
+            fn index_mut(&mut self, index: IntegerIdx) -> &mut Self::Output { &mut self.integers[index.index()] }
+        }
+        
+        assert_eq!(int_idx_2.get(&int_and_bool), &20);
+        *int_idx_2.get_mut(&mut int_and_bool) = 50;
+        assert_eq!(int_idx_2.get(&int_and_bool), &50);
     }
 }

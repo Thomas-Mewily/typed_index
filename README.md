@@ -1,5 +1,8 @@
 Define `IndexTo<Data, Owner, Idx=usize>`, a strongly typed index for vector, slice, and str type.
 
+
+Also define a `10usize.get(&myVec)` and `IndexLike.getMut(Inside)` to access value from an index.
+
 Provides optional support for [Serde](https://docs.rs/serde/latest/serde/) (serialization / deserialization) when the "serde" feature is enabled.
 
 ```rust
