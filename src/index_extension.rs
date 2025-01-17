@@ -9,5 +9,6 @@ pub trait IndexLike : Copy
     fn get_mut<T>(self, inside : &mut T) -> &mut T::Output where T : IndexMut<Self> { inside.index_mut(self) }
 }
 
-impl IndexLike for usize where {}
+impl IndexLike for usize {}
+impl IndexLike for isize {}
 impl<Data, Idx>  IndexLike for IndexTo<Data, Idx> where Self : Copy, Data : ?Sized {}
