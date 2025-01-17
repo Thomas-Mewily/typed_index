@@ -1,4 +1,4 @@
-//! A strongly typed index for vector, slice, and str type : `IndexTo<Data, Owner, Idx=usize>`
+//! A strongly typed index for vector, slice, and str type : `IndexTo<Data, Idx=usize>`
 //! 
 //! Provides optional support for [Serde](https://docs.rs/serde/latest/serde/) (serialization / deserialization) when the "serde" feature is enabled.
 //!
@@ -12,23 +12,19 @@
 //!     booleans : Vec<bool>,
 //! }
 //!         
-//! type IntegerIdx = <Vec<i32>  as HaveTypedIndex>::IndexTo;
-//! type BooleanIdx = <Vec<bool> as HaveTypedIndex>::IndexTo;
-//! 
-//! // can also be written as
-//! // type IntegerIdx = IndexTo<i32 , Vec<i32 >>;
-//! // type BooleanIdx = IndexTo<bool, Vec<bool>>;
+//! type IntegerIdx = IndexTo<i32>;
+//! type BooleanIdx = IndexTo<bool>;
 //! 
 //! impl Index<IntegerIdx> for IntAndBool
 //! {
 //!     type Output=i32;
-//!     fn index(&self, index: IntegerIdx) -> &Self::Output { &self.integers[index] }
+//!     fn index(&self, index: IntegerIdx) -> &Self::Output { &self.integers[index.index()] }
 //! }
 //! 
 //! impl Index<BooleanIdx> for IntAndBool
 //! {
 //!     type Output=bool;
-//!     fn index(&self, index: BooleanIdx) -> &Self::Output { &self.booleans[index] }
+//!     fn index(&self, index: BooleanIdx) -> &Self::Output { &self.booleans[index.index()] }
 //! }
 //! 
 //! let mut int_and_bool = IntAndBool { integers : vec![10, 20, 30], booleans : vec![true, false] };
@@ -59,7 +55,7 @@
 //! assert_eq!(int_and_bool.booleans.typed_index_mut(BooleanIdx::from_index(0)), &mut true);
 //! ```
 
-use std::fmt::{Display, Debug, Formatter, Result as DResult};
+use std::fmt::{Debug, Formatter, Result as DResult};
 use std::marker::PhantomData;
 use std::hash::Hash;
 use std::ops::{Index, IndexMut};
@@ -68,6 +64,8 @@ use std::ops::{Index, IndexMut};
 pub(crate) mod serde_support;
 #[cfg(feature = "serde")]
 pub(crate) use serde_support::*;
+
+mod std_impl;
 
 /// A strongly typed index for vector, slice, and str type.
 /// 
@@ -81,23 +79,19 @@ pub(crate) use serde_support::*;
 ///     booleans : Vec<bool>,
 /// }
 ///         
-/// type IntegerIdx = <Vec<i32>  as HaveTypedIndex>::IndexTo;
-/// type BooleanIdx = <Vec<bool> as HaveTypedIndex>::IndexTo;
-/// 
-/// // can also be written as
-/// // type IntegerIdx = IndexTo<i32 , Vec<i32 >>;
-/// // type BooleanIdx = IndexTo<bool, Vec<bool>>;
+/// type IntegerIdx = IndexTo<i32>;
+/// type BooleanIdx = IndexTo<bool>;
 /// 
 /// impl Index<IntegerIdx> for IntAndBool
 /// {
 ///     type Output=i32;
-///     fn index(&self, index: IntegerIdx) -> &Self::Output { &self.integers[index] }
+///     fn index(&self, index: IntegerIdx) -> &Self::Output { &self.integers[index.index()] }
 /// }
 /// 
 /// impl Index<BooleanIdx> for IntAndBool
 /// {
 ///     type Output=bool;
-///     fn index(&self, index: BooleanIdx) -> &Self::Output { &self.booleans[index] }
+///     fn index(&self, index: BooleanIdx) -> &Self::Output { &self.booleans[index.index()] }
 /// }
 /// 
 /// let mut int_and_bool = IntAndBool { integers : vec![10, 20, 30], booleans : vec![true, false] };
@@ -127,23 +121,20 @@ pub(crate) use serde_support::*;
 /// assert_eq!(int_and_bool.integers.typed_index_mut(IntegerIdx::from_index(1)), &mut 20);
 /// assert_eq!(int_and_bool.booleans.typed_index_mut(BooleanIdx::from_index(0)), &mut true);
 /// ```
-pub struct IndexTo<Data, In, Idx=usize> 
+pub struct IndexTo<Data, Idx=usize> 
     where
     Data : ?Sized, 
-    In : ?Sized
 {
     index : Idx,
     index_data  : PhantomData<Data>,
-    index_owner : PhantomData<In>,
 }
 
-impl<Data, Inside, Idx> IndexTo<Data, Inside, Idx>
+impl<Data, Idx> IndexTo<Data, Idx>
     where
     Data : ?Sized, 
-    Inside : ?Sized
 {
     #[inline]
-    pub const fn from_index(index : Idx) -> Self { Self { index, index_data: PhantomData, index_owner : PhantomData }}
+    pub const fn from_index(index : Idx) -> Self { Self { index, index_data: PhantomData }}
     #[inline]
     pub const fn index(self) -> Idx where Idx : Copy { self.index }
     #[inline]
@@ -152,50 +143,16 @@ impl<Data, Inside, Idx> IndexTo<Data, Inside, Idx>
     pub fn with_index(mut self, index : Idx) -> Self { self.set_index(index); self }
 }
 
-impl<Data : ?Sized, In : ?Sized, Idx> Hash       for IndexTo<Data, In, Idx> where Idx : Hash       { #[inline] fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.index.hash(state); } }
-impl<Data : ?Sized, In : ?Sized, Idx> Clone      for IndexTo<Data, In, Idx> where Idx : Clone      { #[inline] fn clone(&self) -> Self { Self::from_index(self.index.clone()) } }
-impl<Data : ?Sized, In : ?Sized, Idx> Copy       for IndexTo<Data, In, Idx> where Idx : Copy       {}
-impl<Data : ?Sized, In : ?Sized, Idx> Debug      for IndexTo<Data, In, Idx> where Idx : Debug      { fn fmt(&self, f: &mut Formatter<'_>) -> DResult { write!(f, "IndexTo<{}>({:?})", std::any::type_name::<In>(), self.index) } }
-impl<Data : ?Sized, In : ?Sized, Idx> Display    for IndexTo<Data, In, Idx> where Idx : Display    { fn fmt(&self, f: &mut Formatter<'_>) -> DResult { write!(f, "IndexTo<{}>({})", std::any::type_name::<In>(), self.index) } }
-impl<Data : ?Sized, In : ?Sized, Idx> Eq         for IndexTo<Data, In, Idx> where Idx : Eq         {}
-impl<Data : ?Sized, In : ?Sized, Idx> PartialEq  for IndexTo<Data, In, Idx> where Idx : PartialEq  { #[inline] fn eq(&self, other: &Self) -> bool { self.index == other.index } }
-impl<Data : ?Sized, In : ?Sized, Idx> Ord        for IndexTo<Data, In, Idx> where Idx : Ord        { #[inline] fn cmp(&self, other: &Self) -> std::cmp::Ordering { self.index.cmp(&other.index) } }
-impl<Data : ?Sized, In : ?Sized, Idx> PartialOrd for IndexTo<Data, In, Idx> where Idx : PartialOrd { #[inline] fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> { self.index.partial_cmp(&other.index) } }
+impl<Data : ?Sized, Idx> Hash       for IndexTo<Data, Idx> where Idx : Hash       { #[inline] fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.index.hash(state); } }
+impl<Data : ?Sized, Idx> Clone      for IndexTo<Data, Idx> where Idx : Clone      { #[inline] fn clone(&self) -> Self { Self::from_index(self.index.clone()) } }
+impl<Data : ?Sized, Idx> Copy       for IndexTo<Data, Idx> where Idx : Copy       {}
+impl<Data : ?Sized, Idx> Debug      for IndexTo<Data, Idx> where Idx : Debug      { fn fmt(&self, f: &mut Formatter<'_>) -> DResult { write!(f, "{}#{:?}", std::any::type_name::<Data>(), self.index) } }
+impl<Data : ?Sized, Idx> Eq         for IndexTo<Data, Idx> where Idx : Eq         {}
+impl<Data : ?Sized, Idx> PartialEq  for IndexTo<Data, Idx> where Idx : PartialEq  { #[inline] fn eq(&self, other: &Self) -> bool { self.index == other.index } }
+impl<Data : ?Sized, Idx> Ord        for IndexTo<Data, Idx> where Idx : Ord        { #[inline] fn cmp(&self, other: &Self) -> std::cmp::Ordering { self.index.cmp(&other.index) } }
+impl<Data : ?Sized, Idx> PartialOrd for IndexTo<Data, Idx> where Idx : PartialOrd { #[inline] fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> { self.index.partial_cmp(&other.index) } }
 
-impl<D> Index<IndexTo<D, Vec<D>>> for Vec<D>
-{
-    type Output=D;
-    #[inline]
-    fn index(&self, index: IndexTo<D, Vec<D>>) -> &Self::Output { self.index(index.index) }
-}
-
-impl<T> IndexMut<IndexTo<T, Vec<T>>> for Vec<T>
-{
-    #[inline]
-    fn index_mut(&mut self, index: IndexTo<T, Vec<T>>) -> &mut Self::Output { self.index_mut(index.index) }
-}
-
-impl<T> Index<IndexTo<T, [T]>> for [T]
-{
-    type Output=T;
-    #[inline]
-    fn index(&self, index: IndexTo<T, [T]>) -> &Self::Output { self.get(index.index).unwrap() }
-}
-
-impl<T> IndexMut<IndexTo<T, [T]>> for [T]
-{
-    #[inline]
-    fn index_mut(&mut self, index: IndexTo<T, [T]>) -> &mut Self::Output { self.get_mut(index.index).unwrap() }
-}
-
-impl Index<IndexTo<u8, str>> for str
-{
-    type Output=u8;
-    #[inline]
-    fn index(&self, index: IndexTo<u8, str>) -> &Self::Output { self.as_bytes().index(index.index) }
-}
-
-pub trait HaveTypedIndex<Idx=usize> where Idx : ?Sized
+pub trait HaveTypedIndex<Idx=usize> : Index<Idx>
 {
     type IndexTo;
     type Output : ?Sized;
@@ -204,7 +161,7 @@ pub trait HaveTypedIndex<Idx=usize> where Idx : ?Sized
 }
 impl<Idx, T> HaveTypedIndex<Idx> for T where T : Index<Idx> + ?Sized
 {
-    type IndexTo = IndexTo<Self::Output, Self, Idx>;
+    type IndexTo = IndexTo<<T as Index<Idx>>::Output, Idx>;
     /// The returned type after indexing.
     type Output = T::Output;
 
@@ -213,7 +170,7 @@ impl<Idx, T> HaveTypedIndex<Idx> for T where T : Index<Idx> + ?Sized
     }
 }
 
-pub trait TypedIndex<Idx:?Sized> : HaveTypedIndex<Idx> + Index<Self::IndexTo>
+pub trait TypedIndex<Idx=usize> : Index<Idx>
 {
     // The documentation comment is copied from the standard library
 
@@ -222,11 +179,11 @@ pub trait TypedIndex<Idx:?Sized> : HaveTypedIndex<Idx> + Index<Self::IndexTo>
     /// # Panics
     ///
     /// May panic if the index is out of bounds.
-    fn typed_index(&self, index : Self::IndexTo) -> &<Self as Index<Self::IndexTo>>::Output { self.index(index) }
+    fn typed_index(&self, index : IndexTo<Self::Output, Idx>) -> &<Self as Index<Idx>>::Output { self.index(index.index) }
 }
-impl<T, Idx:?Sized> TypedIndex<Idx> for T where T : HaveTypedIndex<Idx> + Index<T::IndexTo> { }
+impl<Idx, T> TypedIndex<Idx> for T where T : Index<Idx> { }
 
-pub trait TypedIndexMut<Idx:?Sized> : HaveTypedIndex<Idx> + IndexMut<Self::IndexTo>
+pub trait TypedIndexMut<Idx=usize> : IndexMut<Idx>
 {
     // The documentation comment is copied from the standard library
 
@@ -235,9 +192,9 @@ pub trait TypedIndexMut<Idx:?Sized> : HaveTypedIndex<Idx> + IndexMut<Self::Index
     /// # Panics
     ///
     /// May panic if the index is out of bounds.
-    fn typed_index_mut(&mut self, index : Self::IndexTo) -> &mut <Self as Index<Self::IndexTo>>::Output { self.index_mut(index) }
+    fn typed_index_mut(&mut self, index : IndexTo<Self::Output, Idx>) -> &mut <Self as Index<Idx>>::Output { self.index_mut(index.index) }
 }
-impl<T, Idx:?Sized> TypedIndexMut<Idx> for T where T : HaveTypedIndex<Idx> + IndexMut<T::IndexTo> { }
+impl<Idx, T> TypedIndexMut<Idx> for T where T : IndexMut<Idx> { }
 
 
 #[cfg(test)]
@@ -256,23 +213,19 @@ mod tests {
             booleans : Vec<bool>,
         }
                 
-        type IntegerIdx = <Vec<i32>  as HaveTypedIndex>::IndexTo;
-        type BooleanIdx = <Vec<bool> as HaveTypedIndex>::IndexTo;
-
-        // can also be written as
-        // type IntegerIdx = IndexTo<i32 , Vec<i32 >>;
-        // type BooleanIdx = IndexTo<bool, Vec<bool>>;
+        type IntegerIdx = IndexTo<i32>;
+        type BooleanIdx = IndexTo<bool>;
         
         impl Index<IntegerIdx> for IntAndBool
         {
             type Output=i32;
-            fn index(&self, index: IntegerIdx) -> &Self::Output { &self.integers[index] }
+            fn index(&self, index: IntegerIdx) -> &Self::Output { &self.integers[index.index()] }
         }
         
         impl Index<BooleanIdx> for IntAndBool
         {
             type Output=bool;
-            fn index(&self, index: BooleanIdx) -> &Self::Output { &self.booleans[index] }
+            fn index(&self, index: BooleanIdx) -> &Self::Output { &self.booleans[index.index()] }
         }
         
         let mut int_and_bool = IntAndBool { integers : vec![10, 20, 30], booleans : vec![true, false] };

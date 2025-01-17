@@ -10,6 +10,7 @@ keywords = ["container", "typed", "index"]
 categories = ["rust-patterns", "data-structures"]
 description = "A strongly typed Index for vector, slice, and str type"
 
+
 [dependencies]
 serde = { version = "1.0.215", features = ["derive"], optional = true }
 
