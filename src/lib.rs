@@ -1,4 +1,4 @@
-//! A strongly typed index for vector, slice, and str type : `IndexTo<Data, Idx=usize>`
+//! A strongly typed index that know what it is indexing : `IndexTo<Data, Idx=usize>`
 //! 
 //! Also define a `10usize.get(&myVec)` and `IndexLike.getMut(Inside)` to access value from an index using the [IndexLike] trait.
 //! 
